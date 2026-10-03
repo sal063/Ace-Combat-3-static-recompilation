@@ -177,10 +177,11 @@ void ac3_unimplemented(ctx_t *ctx, u32 addr, const char *what) {
 }
 
 void ac3_prof_dump(int top) {
-    extern unsigned long long ac3_prof[] __attribute__((weak));
-    if (!ac3_prof) { printf("\n(profiling not compiled in)\n"); return; }
+    extern unsigned long long ac3_prof[];
+    extern const unsigned ac3_prof_len;
+    if (!ac3_prof_len) { printf("\n(profiling not compiled in)\n"); return; }
 
-    unsigned n = ac3_func_table_len;
+    unsigned n = ac3_prof_len;
     unsigned *idx = (unsigned *)malloc(n * sizeof(unsigned));
     if (!idx) return;
     unsigned live = 0;

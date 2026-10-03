@@ -329,7 +329,7 @@ void psyq_SpuSetTransferCallback(ctx_t *ctx) {
 void psyq_SpuReadDecodedData(ctx_t *ctx) {
     spu_ram_init();
     u32 dst = A0;
-    long flag = (long)A1;
+    long flag = (long)(s32)A1;
     if (!dst) { RET(0); return; }
     u8 *g = (u8 *)guest_ptr(dst, 0x1000u);
     if (!g) {
@@ -400,11 +400,11 @@ static void apply_voice_attr(u32 p, int v, spu_voice_t *sv, u32 mask) {
     }
 
     if (all || (mask & SPU_VOICE_ADSR_AMODE))
-        set_a_mode(sv, (long)MEM_R32(p + VA_A_MODE));
+        set_a_mode(sv, (long)(s32)MEM_R32(p + VA_A_MODE));
     if (all || (mask & SPU_VOICE_ADSR_SMODE))
-        set_s_mode(sv, (long)MEM_R32(p + VA_S_MODE));
+        set_s_mode(sv, (long)(s32)MEM_R32(p + VA_S_MODE));
     if (all || (mask & SPU_VOICE_ADSR_RMODE))
-        set_r_mode(sv, (long)MEM_R32(p + VA_R_MODE));
+        set_r_mode(sv, (long)(s32)MEM_R32(p + VA_R_MODE));
 
     if (all || (mask & SPU_VOICE_ADSR_AR))
         sv->adsr1 = (u16)((sv->adsr1 & ~0x7F00u) |
@@ -528,7 +528,7 @@ static u32 apply_voice_switch(u32 cur, long on_off, u32 bits) {
 }
 
 void psyq_SpuSetKey(ctx_t *ctx) {
-    long on = (long)A0;
+    long on = (long)(s32)A0;
     u32 bits = A1;
     for (int v = 0; v < SPU_VOICES; v++) {
         if (!(bits & (1u << v))) continue;
@@ -716,7 +716,7 @@ static long spu_heap_alloc(u32 from, u32 size) {
 }
 
 void psyq_SpuInitMalloc(ctx_t *ctx) {
-    long num = (long)A0;
+    long num = (long)(s32)A0;
     memset(spu_heap, 0, sizeof spu_heap);
     if (num < 0) num = 0;
     if (num > SPU_MAX_BLOCKS) {
@@ -853,12 +853,12 @@ static int clear_work_area(u32 mode) {
 
 void psyq_SpuClearReverbWorkArea(ctx_t *ctx) {
     int r = clear_work_area(A0);
-    if (r) hle_warn("SpuClearReverbWorkArea", "mode %ld refused", (long)A0);
+    if (r) hle_warn("SpuClearReverbWorkArea", "mode %ld refused", (long)(s32)A0);
     RET((u32)r);
 }
 
 void psyq_SpuSetReverb(ctx_t *ctx) {
-    long on = (long)A0;
+    long on = (long)(s32)A0;
     if (on == SPU_LIB_OFF) {
         rev_flag = 0;
         ac3_spu_rvb_set_enable(0);
@@ -990,17 +990,17 @@ void psyq_SpuSetReverbDepth(ctx_t *ctx) {
 }
 
 void psyq_SpuSetReverbVoice(ctx_t *ctx) {
-    u32 next = apply_voice_switch(ac3_spu_get_reverb_voices(), (long)A0, A1);
+    u32 next = apply_voice_switch(ac3_spu_get_reverb_voices(), (long)(s32)A0, A1);
     ac3_spu_set_reverb_voices(next);
     hle_trace("SpuSetReverbVoice", "on_off=%ld bits=0x%06X -> 0x%06X",
-              (long)A0, A1, next);
+              (long)(s32)A0, A1, next);
     RET(next);
 }
 
 void psyq_SpuGetReverbVoice(ctx_t *ctx) { RET(ac3_spu_get_reverb_voices()); }
 
 void psyq_SpuReserveReverbWorkArea(ctx_t *ctx) {
-    long on = (long)A0;
+    long on = (long)(s32)A0;
     if (on == SPU_LIB_ON) {
         if (!reverb_area_free()) {
             hle_warn("SpuReserveReverbWorkArea",
@@ -1016,7 +1016,7 @@ void psyq_SpuReserveReverbWorkArea(ctx_t *ctx) {
 }
 
 void psyq_SpuIsReverbWorkAreaReserved(ctx_t *ctx) {
-    long on = (long)A0;
+    long on = (long)(s32)A0;
     int answer;
     if (on == SPU_DIAG) answer = reverb_area_free();
     else                answer = (rev_reserved == SPU_LIB_ON);
@@ -1030,7 +1030,7 @@ void psyq_SpuSetESA(ctx_t *ctx) {
 }
 
 void psyq_SpuSetNoiseVoice(ctx_t *ctx) {
-    u32 next = apply_voice_switch(ac3_spu_get_noise_voices(), (long)A0, A1);
+    u32 next = apply_voice_switch(ac3_spu_get_noise_voices(), (long)(s32)A0, A1);
     ac3_spu_set_noise_voices(next);
     RET(next);
 }
@@ -1042,7 +1042,7 @@ void psyq_SpuSetNoiseClock(ctx_t *ctx) {
 void psyq_SpuGetNoiseClock(ctx_t *ctx) { RET((u32)ac3_spu_get_noise_clock()); }
 
 void psyq_SpuSetPitchLFOVoice(ctx_t *ctx) {
-    u32 next = apply_voice_switch(ac3_spu_get_pitch_lfo_voices(), (long)A0, A1);
+    u32 next = apply_voice_switch(ac3_spu_get_pitch_lfo_voices(), (long)(s32)A0, A1);
     ac3_spu_set_pitch_lfo_voices(next);
     RET(next);
 }
@@ -1050,7 +1050,7 @@ void psyq_SpuGetPitchLFOVoice(ctx_t *ctx) { RET(ac3_spu_get_pitch_lfo_voices());
 
 void psyq_SpuSetIRQ(ctx_t *ctx) {
     int prev = irq_on;
-    irq_on = ((long)A0 == SPU_LIB_ON);
+    irq_on = ((long)(s32)A0 == SPU_LIB_ON);
     if (irq_on) hle_warn("SpuSetIRQ", "SPU interrupts are not delivered");
     RET((u32)(prev ? SPU_LIB_ON : SPU_LIB_OFF));
 }
