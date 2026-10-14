@@ -320,7 +320,10 @@ static void flush_ops(int phase) {
         for (int i = 0; i < nbops; i++) {
             bop_t *b = &bops[i];
             if (phase == PH_FLARE) {
-                if (b->type == B_POLY || b->type == B_RECT) { b->skip = 1; gstat.sun++; }
+                /* Opaque untextured rects here are screen clears, such as the
+                   cutscene letterbox bands, not the flare: keep them. */
+                int clear = b->type == B_RECT && !b->rect.textured && !b->rect.semitrans;
+                if ((b->type == B_POLY || b->type == B_RECT) && !clear) { b->skip = 1; gstat.sun++; }
                 continue;
             }
             if (b->type != B_POLY || !sun_ahead || (b->mode != 1 && b->mode != 3)) continue;
