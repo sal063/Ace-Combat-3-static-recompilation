@@ -68,6 +68,17 @@ A full build takes well under a minute on a recent machine. You end up with
 To translate the game again (after changing the recompiler, say), delete
 `recomp\main` and run the configure command once more.
 
+## Building on Linux
+
+Install clang, cmake, ninja, python, sdl3, vulkan-headers, vulkan-icd-loader and
+shaderc (for `glslc`). On Arch:
+
+    sudo pacman -S clang cmake ninja python sdl3 vulkan-headers vulkan-icd-loader shaderc
+
+Then follow the same steps as above (forward slashes in paths). The binaries
+are `build/ac3` and `build/ac3_enhanced`, and `play.sh` / `play_enhanced.sh`
+take the same arguments as the `.bat` files.
+
 ## Running
 
     play.bat                    the original look

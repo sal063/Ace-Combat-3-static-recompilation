@@ -5,9 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <SDL3/SDL_timer.h>
+#ifdef _WIN32
 #include <direct.h>
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#define MKDIR(p) _mkdir(p)
+#else
+#include <sys/stat.h>
+#define MKDIR(p) mkdir((p), 0755)
+#endif
 
 extern int ac3_write_png_rgb(const char *path, unsigned w, unsigned h,
                              const unsigned char *rgb);
@@ -80,7 +85,7 @@ static void rec_start(void) {
 static void rec_finish(void) {
     rec.active = 0;
     ac3_pgxp_tap = NULL;
-    _mkdir("captures_hd");
+    MKDIR("captures_hd");
     char path[260];
     for (int i = 0; i < 10000; i++) {
         snprintf(path, sizeof path, "captures_hd/frame_%04d.ac3r", i);
@@ -315,7 +320,10 @@ static void flush_ops(int phase) {
         for (int i = 0; i < nbops; i++) {
             bop_t *b = &bops[i];
             if (phase == PH_FLARE) {
-                if (b->type == B_POLY || b->type == B_RECT) { b->skip = 1; gstat.sun++; }
+                /* Opaque untextured rects here are screen clears, such as the
+                   cutscene letterbox bands, not the flare: keep them. */
+                int clear = b->type == B_RECT && !b->rect.textured && !b->rect.semitrans;
+                if ((b->type == B_POLY || b->type == B_RECT) && !clear) { b->skip = 1; gstat.sun++; }
                 continue;
             }
             if (b->type != B_POLY || !sun_ahead || (b->mode != 1 && b->mode != 3)) continue;
@@ -1008,9 +1016,7 @@ static int headless_init(int scale) {
 static double flush_ms;
 
 static void headless_flush(void) {
-    LARGE_INTEGER f0, f1, fq;
-    QueryPerformanceFrequency(&fq);
-    QueryPerformanceCounter(&f0);
+    Uint64 f0 = SDL_GetPerformanceCounter();
     vkResetCommandBuffer(HV.cb, 0);
     VkCommandBufferBeginInfo bi = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     bi.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -1022,8 +1028,8 @@ static void headless_flush(void) {
     si.pCommandBuffers = &HV.cb;
     vkQueueSubmit(HV.q, 1, &si, VK_NULL_HANDLE);
     vkQueueWaitIdle(HV.q);
-    QueryPerformanceCounter(&f1);
-    flush_ms = (double)(f1.QuadPart - f0.QuadPart) * 1000.0 / (double)fq.QuadPart;
+    Uint64 f1 = SDL_GetPerformanceCounter();
+    flush_ms = (double)(f1 - f0) * 1000.0 / (double)SDL_GetPerformanceFrequency();
 }
 
 static void headless_shutdown(void) {
@@ -1788,7 +1794,7 @@ int ac3_selftest_hw(void) {
     printf("enhanced renderer: precise vertices\n");
     st_gte();
     printf("enhanced renderer against the software GPU\n");
-    _mkdir("selftest_out");
+    MKDIR("selftest_out");
     int scales[2] = { 1, 4 };
     extern void ac3_vram_init(void);
     ac3_vram_init();

@@ -3,7 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
 #include <direct.h>
+#define MKDIR(p) _mkdir(p)
+#else
+#include <sys/stat.h>
+#define MKDIR(p) mkdir((p), 0755)
+#endif
 
 #define GAME_GP        0x800BCB74u
 static const u32 sim_fns[] = {
@@ -101,11 +107,11 @@ static void make_dirs(const char *path, int file) {
         if ((*p == '/' || *p == '\\') && p != buf && p[-1] != ':') {
             char c = *p;
             *p = '\0';
-            _mkdir(buf);
+            MKDIR(buf);
             *p = c;
         }
     }
-    if (buf[0]) _mkdir(buf);
+    if (buf[0]) MKDIR(buf);
 }
 
 extern void ac3_card_set_path(int slot, const char *path);

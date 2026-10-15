@@ -13,7 +13,15 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-set(SDL3_ROOT "C:/SDL3" CACHE PATH "SDL3 development root")
+if(WIN32)
+  set(SDL3_ROOT "C:/SDL3" CACHE PATH "SDL3 development root")
+  set(AC3_SDL3_INCLUDE ${SDL3_ROOT}/include)
+  set(AC3_SDL3_LIB ${SDL3_ROOT}/lib/x64/SDL3.lib)
+else()
+  find_package(SDL3 REQUIRED CONFIG COMPONENTS SDL3-shared)
+  set(AC3_SDL3_INCLUDE)
+  set(AC3_SDL3_LIB SDL3::SDL3 m)
+endif()
 find_package(Vulkan REQUIRED COMPONENTS glslc)
 
 # The game's code is not in this repository. It is translated to C here, from
@@ -103,16 +111,18 @@ function(ac3_game target)
         ${AC3_RUNTIME_SRC} ${AC3_HLE_SRC} ${AC3_RENDER_SRC} ${AC3_HOST_SRC} ${ARGN})
     target_include_directories(${target} PRIVATE ${AC3_INCLUDES}
         ${CMAKE_SOURCE_DIR}/renderer
-        ${SDL3_ROOT}/include
+        ${AC3_SDL3_INCLUDE}
         ${Vulkan_INCLUDE_DIRS})
     target_link_libraries(${target} PRIVATE ac3_recomp_main
-        ${SDL3_ROOT}/lib/x64/SDL3.lib
+        ${AC3_SDL3_LIB}
         ${Vulkan_LIBRARIES})
     target_compile_options(${target} PRIVATE -O1 -Wall -Wextra -Wno-unused-parameter
         -Wno-deprecated-declarations)
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                ${SDL3_ROOT}/lib/x64/SDL3.dll $<TARGET_FILE_DIR:${target}>)
+    if(WIN32)
+      add_custom_command(TARGET ${target} POST_BUILD
+          COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                  ${SDL3_ROOT}/lib/x64/SDL3.dll $<TARGET_FILE_DIR:${target}>)
+    endif()
 endfunction()
 
 ac3_game(ac3)
@@ -124,7 +134,10 @@ add_library(ac3_imgui STATIC
     ${IMGUI_DIR}/imgui_widgets.cpp
     ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp ${IMGUI_DIR}/backends/imgui_impl_vulkan.cpp)
 target_include_directories(ac3_imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends
-    ${SDL3_ROOT}/include ${Vulkan_INCLUDE_DIRS})
+    ${AC3_SDL3_INCLUDE} ${Vulkan_INCLUDE_DIRS})
+if(NOT WIN32)
+  target_link_libraries(ac3_imgui PUBLIC SDL3::SDL3)
+endif()
 target_compile_options(ac3_imgui PRIVATE -O2 -w)
 
 ac3_game(ac3_enhanced ${AC3_HW_SRC} ${CMAKE_SOURCE_DIR}/renderer/hw/hw_ui.cpp)
